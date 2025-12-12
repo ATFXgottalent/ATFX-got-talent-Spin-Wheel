@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ATFX Got Talent Spinner</title>
+  <style>
+    body{font-family:sans-serif;background:#f6f7fb;margin:0;padding:40px;text-align:center;}
+    canvas{border-radius:12px;}
+    button{padding:12px 18px;margin-top:20px;font-size:16px;border:none;border-radius:8px;background:#2b6cb0;color:#fff;cursor:pointer;}
+    h1{margin-bottom:24px;color:#111;}
+    #results{margin-top:20px;font-size:18px;color:#111;}
+  </style>
+</head>
+<body>
+  <h1>ATFX Got Talent — Spin the Wheel</h1>
+
+  <!-- Pointer facing DOWN -->
+  <div style="position:relative; width:600px; margin:auto;">
+      <canvas id="wheel" width="600" height="600"></canvas>
+      <div id="pointer" style="
+        position:absolute;
+        top:-10px;
+        left:50%;
+        transform:translateX(-50%);
+        width:0;
+        height:0;
+        border-left:20px solid transparent;
+        border-right:20px solid transparent;
+        border-top:35px solid #ff6600;
+      "></div>
+  </div>
+
+  <button id="spinBtn">Spin</button>
+  <div id="results"></div>
+
+<script>
+const items = ['Jordan','Mexico','LATAM','Malaysia','Singapore','Vietnam','Indonesia','Thailand','Philippines','UAE'];
+const forcedWinners = ['Jordan','Mexico'];
+const numWinners = 5;
+let picked = [];
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const cx = canvas.width/2, cy = canvas.height/2, radius = 250;
+let rotation = 0;
+
+// Colors (ATFX Blue & Orange)
+const colors = ['#005bbb','#ff6600','#0077cc','#ff7f32','#3399ff','#ff8f4d','#66b2ff','#ffa366','#99ccff','#ffb380'];
+
+function drawWheel(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const n = items.length;
+  const arc = (Math.PI*2)/n;
+
+  for(let i=0;i<n;i++){
+    const start = rotation + i*arc;
+
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,radius,start,start+arc);
+    ctx.closePath();
+    ctx.fillStyle = colors[i%colors.length];
+    ctx.fill();
+
+    // Text
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start+arc/2);
+    ctx.textAlign='right';
+    ctx.fillStyle='#fff';
+    ctx.font='bold 20px sans-serif';
+    ctx.fillText(items[i], radius-15, 8);
+    ctx.restore();
+  }
+
+  // Center circle
+  ctx.beginPath(); 
+  ctx.arc(cx,cy,48,0,Math.PI*2); 
+  ctx.fillStyle='#fff'; 
+  ctx.fill();
+}
+
+drawWheel();
+
+function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+
+function spinToIndex(idx){
+  const n = items.length;
+  const arc = (Math.PI*2)/n;
+
+  // Pointer is facing DOWN so target angle is upward (angle = -90°)
+  const targetAngle = -(idx*arc + arc/2) - Math.PI/2;
+
+  const spins = 3 + Math.floor(Math.random()*2);
+  const finalRotation = targetAngle + spins*Math.PI*2;
+
+  const start = performance.now();
+  const from = rotation;
+
+  function animate(now){
+    const t = Math.min(1,(now-start)/3000);
+    rotation = from + (finalRotation-from)*easeOutCubic(t);
+    drawWheel();
+
+    if(t<1) requestAnimationFrame(animate);
+    else{
+      rotation = (rotation%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+      showWinner(items[idx]);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showWinner(name){
+  document.getElementById('results').innerHTML =
+    '<h2 style="color:#ff6600">🎉 Congratulations ' + name + '! 🎉</h2>';
+}
+
+function pickNext(){
+  if(picked.length>=numWinners){
+    document.getElementById('results').innerHTML =
+      'Final Winners: ' + picked.join(', ');
+    return;
+  }
+
+  let next;
+  if(forcedWinners.length>0){
+    next = forcedWinners.shift();
+  } else {
+    const remaining = items.filter(i=>!picked.includes(i));
+    next = remaining[Math.floor(Math.random()*remaining.length)];
+  }
+
+  picked.push(next);
+  const idx = items.indexOf(next);
+  spinToIndex(idx);
+}
+
+document.getElementById('spinBtn').addEventListener('click',()=>{
+  pickNext();
+});
+</script>
+</body>
+</html>
